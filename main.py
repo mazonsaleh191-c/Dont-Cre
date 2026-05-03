@@ -31,7 +31,7 @@ economy_data = load_economy()
 @bot.event
 async def on_ready():
     print(f'{bot.user.name} اشتغل!')
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="يسطا"))
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="ضيفني لسيرفرك يسطا بقا 😉"))
     daily_reset.start()
 
 # ========== الألعاب ==========
