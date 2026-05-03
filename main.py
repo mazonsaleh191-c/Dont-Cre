@@ -6,11 +6,13 @@ from datetime import datetime, timedelta
 import json
 import os
 
+# إعداد الصلاحيات (Intents)
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 intents.guilds = True
 
+# تعريف البوت والبادئة
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # نظام الاقتصاد
@@ -18,21 +20,25 @@ economy_file = 'economy.json'
 
 def load_economy():
     if os.path.exists(economy_file):
-        with open(economy_file, 'r') as f:
-            return json.load(f)
+        with open(economy_file, 'r', encoding='utf-8') as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                return {}
     return {}
 
 def save_economy(data):
-    with open(economy_file, 'w') as f:
-        json.dump(data, f, indent=4)
+    with open(economy_file, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
 
 economy_data = load_economy()
 
 @bot.event
 async def on_ready():
-    print(f'{bot.user.name} اشتغل!')
+    print(f'{bot.user.name} اشتغل وجاهز لخدمتك!')
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="ضيفني لسيرفرك يسطا بقا 😉"))
-    daily_reset.start()
+    if not daily_reset.is_running():
+        daily_reset.start()
 
 # ========== الألعاب ==========
 @bot.command(name='رول')
@@ -118,7 +124,7 @@ async def clear(ctx, amount: int = 5):
     if amount > 100:
         amount = 100
     deleted = await ctx.channel.purge(limit=amount + 1)
-    msg = await ctx.send(f'🗑️ مسحت {len(deleted)-1} رسالة', delete_after=3)
+    await ctx.send(f'🗑️ مسحت {len(deleted)-1} رسالة', delete_after=3)
 
 @bot.command(name='كيك')
 @commands.has_permissions(kick_members=True)
@@ -244,9 +250,9 @@ async def money(ctx, member: discord.Member = None):
         economy_data[user_id] = {"money": 100, "bank": 0}
         save_economy(economy_data)
     
-    money = economy_data[user_id]["money"]
-    bank = economy_data[user_id]["bank"]
-    await ctx.send(f'💰 {member.name}\n💵 جيب: {money}\n🏦 بنك: {bank}')
+    money_val = economy_data[user_id]["money"]
+    bank_val = economy_data[user_id]["bank"]
+    await ctx.send(f'💰 {member.name}\n💵 جيب: {money_val}\n🏦 بنك: {bank_val}')
 
 @bot.command(name='عمل')
 async def work(ctx):
@@ -387,6 +393,7 @@ async def topmoney(ctx):
 
 @tasks.loop(hours=24)
 async def daily_reset():
+    # هنا يمكن إضافة منطق لتصفير شيء معين كل 24 ساعة إذا أردت
     pass
 
 @bot.command(name='يومي')
@@ -419,7 +426,7 @@ async def info(ctx, member: discord.Member = None):
     embed.add_field(name="🆔 ID", value=member.id, inline=False)
     embed.add_field(name="📅 انضم", value=member.joined_at.strftime("%Y-%m-%d %H:%M"), inline=False)
     embed.add_field(name="🎮 حالة", value=str(member.status).title(), inline=False)
-    embed.add_field(name="🎖️ رتب", value=", ".join([role.name for role in member.roles[1:]]), inline=False)
+    embed.add_field(name="🎖️ رتب", value=", ".join([role.name for role in member.roles[1:]]) if len(member.roles) > 1 else "لا توجد رتب", inline=False)
     
     await ctx.send(embed=embed)
 
@@ -428,7 +435,8 @@ async def server(ctx):
     guild = ctx.guild
     
     embed = discord.Embed(title=f"🏰 {guild.name}", color=discord.Color.blue())
-    embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
+    if guild.icon:
+        embed.set_thumbnail(url=guild.icon.url)
     embed.add_field(name="👥 الاعضاء", value=guild.member_count, inline=True)
     embed.add_field(name="📅 تاريخ التأسيس", value=guild.created_at.strftime("%Y-%m-%d"), inline=True)
     embed.add_field(name="👑 المالك", value=guild.owner.name, inline=True)
@@ -449,7 +457,8 @@ async def time(ctx):
 @bot.command(name='افاتار')
 async def avatar(ctx, member: discord.Member = None):
     member = member or ctx.author
-    await ctx.send(member.avatar.url if member.avatar else member.default_avatar.url)
+    url = member.avatar.url if member.avatar else member.default_avatar.url
+    await ctx.send(url)
 
 # ========== مساعدة ==========
 @bot.command(name='مساعدة')
@@ -489,5 +498,9 @@ async def helpme(ctx):
     embed.set_footer(text=f"طلب {ctx.author.name}")
     await ctx.send(embed=embed)
 
+# تشغيل البوت باستخدام التوكن المخزن في البيئة
 TOKEN = os.getenv('BOT_TOKEN')
-bot.run(TOKEN)
+if TOKEN:
+    bot.run(TOKEN)
+else:
+    print("خطأ: لم يتم العثور على BOT_TOKEN في متغيرات البيئة!")
