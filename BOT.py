@@ -489,5 +489,4 @@ async def helpme(ctx):
     embed.set_footer(text=f"طلب {ctx.author.name}")
     await ctx.send(embed=embed)
 
-TOKEN = 'TOKEN_BOT_HERE'
-bot.run(TOKEN)
+TOKEN = os.getenv('BOT_TOKEN')bot.run(TOKEN)
